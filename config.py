@@ -1,0 +1,7 @@
+# Spotify API
+CLIENT_ID = 'YOUR_CLIENT_ID'
+CLIENT_SECRET = 'YOUR_CLIENT_SECRET'
+USERNAME = 'YOUR_USERNAME'
+REDIRECT_URI = 'YOUR_REDIRECT_URI'
+
+# Add other configurations as necessary
