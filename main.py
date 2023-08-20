@@ -5,6 +5,8 @@ import plotly.express as px
 import plotly.graph_objects as go
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
+from sklearn.manifold import TSNE
+from plotly.subplots import make_subplots
 import config
 
 
@@ -62,7 +64,7 @@ def fetch_songs_and_features(search_query):
     return songs_list
 
 
-def plot_songs_with_pca_plotly(songs_list):
+def modified_pca_plotly(fig, songs_list, row, col):
     # Extract audio features
     features = [
         "danceability",
@@ -94,14 +96,12 @@ def plot_songs_with_pca_plotly(songs_list):
         columns=["principal component 1", "principal component 2"],
     )
 
-    # Create a plotly figure
-    fig = go.Figure()
+    for i, row_data in df.iterrows():
+        song_name = row_data["name"]
+        album = row_data["album"]
+        song_url = row_data["url"]
+        hover_text = f'<a href="{song_url}">{song_name}</a>'
 
-    for i, row in df.iterrows():
-        song_name = row["name"]
-        album = row["album"]
-        song_url = row["url"]
-        hover_text = f"{song_name}<br>{song_url}"
 
         fig.add_trace(
             go.Scatter(
@@ -109,63 +109,103 @@ def plot_songs_with_pca_plotly(songs_list):
                 y=[principalDf["principal component 2"].iloc[i]],
                 mode="markers+text",
                 marker=dict(size=10),
-                text=song_name,
+                text=hover_text,
+                hovertemplate=album,
                 hovertext=hover_text,
-                hoverinfo="text",
                 textfont_size=9,
                 textposition="top center",
                 customdata=[[album, song_url]],
                 marker_symbol="circle-open",
-            )
+            ),
+            row=row,
+            col=col
         )
 
-    # Extract the explained variance by each principal component
-    explained_variance = pca.explained_variance_ratio_
+    # Update the layout for this subplot
+    fig.update_xaxes(title_text="Principal Component 1", row=row, col=col)
+    fig.update_yaxes(title_text="Principal Component 2", row=row, col=col)
 
-    # Add annotations with the explained variance
-    annotations = [
-        dict(
-            xref="paper",
-            yref="paper",
-            x=0.8,
-            y=1.05,
-            xanchor="left",
-            yanchor="bottom",
-            text=f"Explained Variance by Principal Component 1: {explained_variance[0]:.2%}",
-            font=dict(family="Arial", size=12, color="black"),
-            showarrow=False,
-        ),
-        dict(
-            xref="paper",
-            yref="paper",
-            x=0.8,
-            y=1.0,
-            xanchor="left",
-            yanchor="bottom",
-            text=f"Explained Variance by Principal Component 2: {explained_variance[1]:.2%}",
-            font=dict(family="Arial", size=12, color="black"),
-            showarrow=False,
-        ),
+
+
+def modified_tsne_plotly(fig, songs_list, row, col):
+    # Extract audio features
+    features = [
+        "danceability",
+        "energy",
+        "loudness",
+        "speechiness",
+        "acousticness",
+        "instrumentalness",
+        "liveness",
+        "valence",
+        "tempo",
     ]
 
-    # Update layout for better appearance, and add title
-    fig.update_layout(
-        title="2 Component PCA of Audio Features",
-        xaxis_title="Principal Component 1",
-        yaxis_title="Principal Component 2",
-        showlegend=False,
-        annotations=annotations,
+    # Create a DataFrame from the songs list for easier manipulation
+    df = pd.DataFrame(songs_list)
+    X = df[features]
+
+    # Standardize the data
+    scaler = StandardScaler()
+    X_scaled = scaler.fit_transform(X)
+
+    # Apply t-SNE and reduce the data to 2 dimensions
+    tsne = TSNE(n_components=2, random_state=42)
+    tsne_components = tsne.fit_transform(X_scaled)
+
+    # Convert to DataFrame for convenience
+    tsneDf = pd.DataFrame(
+        data=tsne_components,
+        columns=["t-SNE dimension 1", "t-SNE dimension 2"],
     )
 
+    for i, row_data in df.iterrows():
+        song_name = row_data["name"]
+        song_url = row_data["url"]
+        hover_text = f'<a href="{song_url}">{song_name}</a>'
+
+        fig.add_trace(
+            go.Scatter(
+                x=[tsneDf["t-SNE dimension 1"].iloc[i]],
+                y=[tsneDf["t-SNE dimension 2"].iloc[i]],
+                mode="markers+text",
+                marker=dict(size=10),
+                text=hover_text,
+                # hovertemplate='%{text}',
+                hovertext=hover_text,
+                textfont_size=9,
+                textposition="top center",
+            ),
+            row=row,
+            col=col
+        )
+
+    # Update the layout for this subplot
+    fig.update_xaxes(title_text="t-SNE Dimension 1", row=row, col=col)
+    fig.update_yaxes(title_text="t-SNE Dimension 2", row=row, col=col)
+
+def combined_plot(songs_list):
+    # Create a subplot layout
+    fig = make_subplots(rows=1, cols=2, subplot_titles=('PCA', 't-SNE'))
+
+    # Add PCA plot to the first subplot
+    modified_pca_plotly(fig, songs_list, row=1, col=1)
+    
+    # Add t-SNE plot to the second subplot
+    modified_tsne_plotly(fig, songs_list, row=1, col=2)
+
+    # Update layout for better appearance, and add title
+    fig.update_layout(title="PCA and t-SNE Visualization of Audio Features")
+    
+    # Show the combined figure
     fig.show()
 
-
-def search_and_plot_pca(search_query):
+def search_and_plot(search_query):
     songs_data = fetch_songs_and_features(search_query)
-    plot_songs_with_pca_plotly(songs_data)
+    combined_plot(songs_data)
 
 
 if __name__ == "__main__":
     # The script will prompt for an artist's name and then fetch and plot the songs
     artist_name = input("Enter the artist's name to search and visualize songs: ")
-    search_and_plot_pca(artist_name)
+    search_and_plot(artist_name)
