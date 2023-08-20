@@ -1,6 +1,6 @@
 # Spotify Song Visualizer
 
-A tool that fetches songs of a given artist from Spotify and visualizes them using PCA based on their audio features.
+A tool that fetches songs of a given artist from Spotify and visualizes them using PCA and t-SNE based on their audio features.
 
 ## Installation
 
@@ -19,7 +19,7 @@ When prompted, enter the artist's name. The tool will fetch the songs and displa
 
 - Fetches songs from Spotify based on a given artist's name.
 - Extracts audio features of the songs.
-- Visualizes the songs in a 2D space using PCA.
+- Visualizes the songs in a 2D space using PCA and t-SNE.
 
 ## Configuration
 
